@@ -42,13 +42,11 @@ class RoomCubit extends Cubit<RoomState> {
     try {
       if (name != null) {
         print('Name: $name');
-        final twilioRoomTokenResponse =
-        await backendService.createToken(name!);
+        final twilioRoomTokenResponse = await backendService.createToken(name!);
+        print('Twilio response: $twilioRoomTokenResponse');
         token = twilioRoomTokenResponse['accessToken'];
-        identity = twilioRoomTokenResponse['user'];
-
+        identity = twilioRoomTokenResponse['identity'];
       }
-
       if (token != null && identity != null) {
         emit(RoomLoaded(name: name ?? '', token: token, identity: identity));
       } else {
