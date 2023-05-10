@@ -1,9 +1,11 @@
-import 'package:chatroom_twilio/conference/conference_cubit.dart';
-import 'package:chatroom_twilio/conference/conference_page.dart';
+import 'package:twilio_flutter/conference/conference_cubit.dart';
+import 'package:twilio_flutter/conference/conference_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:chatroom_twilio/room/join_room_cubit.dart';
-import 'package:chatroom_twilio/shared/twilio_service.dart';
+import 'package:twilio_flutter/room/join_room_cubit.dart';
+import 'package:twilio_flutter/shared/twilio_service.dart';
+
+import '../app_constants.dart';
 
 class JoinRoomPage extends StatelessWidget {
   final TextEditingController _nameController = TextEditingController();
@@ -18,7 +20,6 @@ class JoinRoomPage extends StatelessWidget {
             child: BlocConsumer<RoomCubit, RoomState>(
                 listener: (context, state) async {
                   if (state is RoomLoaded) {
-                    print("Identity: ${state.identity}, Token: ${state.token}");
                     await Navigator.of(context).push(
                       MaterialPageRoute<ConferencePage>(
                           fullscreenDialog: true,
@@ -51,14 +52,14 @@ class JoinRoomPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             TextField(
-                              key: Key('Mangesh'),
+                              key: Key('enter-name'),
                               decoration: InputDecoration(
                                 labelText: 'Enter your name',
                                 enabled: !isLoading,
                               ),
                               controller: _nameController,
                               onChanged: (newValue) =>
-                                  context.read<RoomCubit>().name = newValue,
+                                  AppConstants.setIdentity(newValue),
                             ),
                             const SizedBox(
                               height: 16,
