@@ -1,64 +1,94 @@
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:chatroom_twilio/shared/twilio_service.dart';
+import 'package:twilio_flutter/conference/conference_cubit.dart';
+import 'package:twilio_flutter/conference/conference_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:twilio_flutter/room/join_room_cubit.dart';
+import 'package:twilio_flutter/shared/twilio_service.dart';
 
-abstract class RoomState extends Equatable {
-  const RoomState();
+import '../app_constants.dart';
+
+class JoinRoomPage extends StatelessWidget {
+  final TextEditingController _nameController = TextEditingController();
   @override
-  List<Object> get props => [];
-}
-
-class RoomInitial extends RoomState {}
-
-class RoomError extends RoomState {
-  final String error;
-  RoomError({required this.error});
-  @override
-  List<Object> get props => [error];
-}
-
-class RoomLoaded extends RoomState {
-  final String name;
-  final String token;
-  final String identity;
-
-  RoomLoaded({required this.name, required this.token, required this.identity});
-  @override
-  List<Object> get props => [];
-}
-
-class RoomLoading extends RoomState {}
-
-class RoomCubit extends Cubit<RoomState> {
-  final TwilioFunctionsService backendService;
-
-  String? name;
-  RoomCubit({required this.backendService}) : super(RoomInitial());
-
-  submit() async {
-    emit(RoomLoading());
-    String? token;
-    String? identity;
-    try {
-      if (name != null) {
-        print('Name: $name');
-        final twilioRoomTokenResponse = await backendService.createToken(name!);
-        print('Twilio response: $twilioRoomTokenResponse');
-        token = twilioRoomTokenResponse['accessToken'];
-        identity = twilioRoomTokenResponse['identity'];
-      }
-      if (token != null && identity != null) {
-        emit(RoomLoaded(name: name ?? '', token: token, identity: identity));
-      } else {
-        emit(RoomError(error: 'Access token is empty!'));
-      }
-    } catch (e) {
-      emit(RoomError(
-          error: 'Something wrong happened when getting the access token'));
-    } finally {
-      print('Token: $token');
-      print('Identity: $identity');
-    }
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          child: BlocProvider(
+            create: (context) =>
+                RoomCubit(backendService: TwilioFunctionsService.instance),
+            child: BlocConsumer<RoomCubit, RoomState>(
+                listener: (context, state) async {
+                  if (state is RoomLoaded) {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute<ConferencePage>(
+                          fullscreenDialog: true,
+                          builder: (BuildContext context) =>
+                          // ConferencePage(roomModel: bloc),
+                          BlocProvider(
+                            create: (BuildContext context) => ConferenceCubit(
+                              identity: state.identity,
+                              token: state.token,
+                              name: state.name,
+                            ),
+                            child: ConferencePage(),
+                          )),
+                    );
+                  }
+            }, builder: (context, state) {
+              var isLoading = false;
+              RoomCubit bloc = context.read<RoomCubit>();
+              if (state is RoomLoading) {
+                isLoading = true;
+              }
+              return Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16, right: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextField(
+                              key: Key('enter-name'),
+                              decoration: InputDecoration(
+                                labelText: 'Enter your name',
+                                enabled: !isLoading,
+                              ),
+                              controller: _nameController,
+                              onChanged: (newValue) =>
+                                  AppConstants.setIdentity(newValue),
+                            ),
+                            const SizedBox(
+                              height: 16,
+                            ),
+                            (isLoading == true)
+                                ? LinearProgressIndicator()
+                                : ElevatedButton(
+                                    onPressed: () async {
+                                      await bloc.submit();
+                                    },
+                                    child: Text('Enter the room')),
+                            (state is RoomError)
+                                ? Text(
+                                    state.error,
+                                    style: TextStyle(color: Colors.red),
+                                  )
+                                : Container(),
+                            const SizedBox(
+                              height: 16,
+                            ),
+                          ],
+                        ),
+                      )
+                    ]),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
   }
-
 }
